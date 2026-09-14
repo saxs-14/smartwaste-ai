@@ -1,5 +1,5 @@
-const API_BASE = "";
-const API_KEY = (import.meta.env.VITE_API_KEY as string) || "dev-local-key-change-me";
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || "https://smartwaste-ai-607032555709.us-central1.run.app";
+const API_KEY = (import.meta.env.VITE_API_KEY as string) || "74ee66ac1daca6a143b7037f2a5597385993359798798d44";
 
 export interface WasteEvent {
   id: number;
