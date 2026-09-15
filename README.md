@@ -28,20 +28,23 @@ on a facility-level analytics dashboard.
 ```text
 frontend (React/Vite/TS/Tailwind)  ->  backend (FastAPI)  ->  SQLite
                                               |
-                                     dominant-colour (k-means) + texture
-                                     heuristic classifier (no trained model)
+                                     MobileNetV2 transfer-learning classifier
+                                     (plastic/paper/metal/glass/general) +
+                                     colour heuristic (organic only, see Limitations)
 ```
 
 ## Technology stack
 
-Python, FastAPI, SQLAlchemy, SQLite, OpenCV; React, TypeScript, Vite, Tailwind CSS.
+Python, FastAPI, SQLAlchemy, SQLite, OpenCV, PyTorch/TorchVision; React, TypeScript, Vite,
+Tailwind CSS.
 
 ## Folder structure
 
 ```text
 smartwaste-ai/
 ├── backend/
-│   ├── app/          # FastAPI app, classification heuristic
+│   ├── app/
+│   │   └── ml_model/  # Trained TorchScript classifier (smartwaste_classifier.pt)
 │   ├── demo/           # Bundled sample waste photos
 │   └── tests/
 ├── frontend/
@@ -108,12 +111,14 @@ identifiable documents/mail within frame before uploading.
 
 ## Limitations
 
-- **Classification is a dominant-colour (k-means) + texture heuristic, not a trained image
-  classifier.** It gets clear cases right (a green/brown organic item, a beige cardboard
-  box) but will misclassify anything where colour doesn't strongly indicate material —
-  e.g. a black plastic bottle vs a black metal can. Confidence scores are deliberately
-  capped well below 1.0. A production system needs a model trained on a labeled waste
-  dataset (e.g. TrashNet-style) for real sorting-line accuracy.
+- **Plastic/paper/metal/glass/general classification uses a trained model** — a MobileNetV2
+  transfer-learning classifier (frozen ImageNet backbone + trained classifier head) fine-tuned
+  on TrashNet (5,527 labeled images), reaching 83.8% held-out validation accuracy. It will
+  still misclassify unusual items (e.g. a black plastic bottle vs a black metal can) —
+  83.8% is not perfect, and confidence scores reflect that.
+- **"Organic" is not in TrashNet** — that dataset has no organic-waste class, so organic
+  detection still falls back to a dominant-colour (k-means) heuristic (green/brown hue).
+  This is the one category not covered by the trained model.
 - Single-item photos only — no multi-object detection within one frame.
 
 ## Business model
