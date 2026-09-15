@@ -1,13 +1,16 @@
 """
 Waste category classification. A MobileNetV2 transfer-learning model
-(frozen ImageNet backbone + trained classifier head, TrashNet dataset,
-5,527 images, 83.8% held-out validation accuracy) classifies
-plastic/paper/metal/glass/general. TrashNet has no "organic" class, so
-organic detection still uses the colour/texture heuristic below - see
-README "Limitations".
+(frozen ImageNet backbone + trained classifier head) classifies
+general/glass/metal/organic/paper/plastic, reaching 86.4% held-out
+validation accuracy. Originally trained on TrashNet alone (83.8% accuracy,
+no "organic" class at all - that category fell back to a colour heuristic).
+Retrained with an MIT-licensed organic/biological-waste dataset added
+(khoaliamle/Garbage_Classification_YOLO's "biological" class, 300 images)
+so the model now covers all 6 categories directly - the colour heuristic
+that used to run before the model for organic detection has been removed.
+See README "Limitations".
 """
 import os
-from typing import Tuple
 
 import cv2
 import numpy as np
@@ -25,7 +28,7 @@ RECOMMENDATIONS = {
 }
 
 _MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml_model", "smartwaste_classifier.pt")
-_MODEL_CLASSES = ["general", "glass", "metal", "paper", "plastic"]
+_MODEL_CLASSES = ["general", "glass", "metal", "organic", "paper", "plastic"]
 _TRANSFORM = transforms.Compose(
     [
         transforms.Resize((224, 224)),
@@ -38,37 +41,7 @@ _model = torch.jit.load(_MODEL_PATH, map_location="cpu")
 _model.eval()
 
 
-def _dominant_hsv(frame: np.ndarray) -> Tuple[float, float, float, float]:
-    """Returns (hue, saturation, value, edge_density) of the dominant colour cluster."""
-    small = cv2.resize(frame, (100, 100))
-    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV).reshape(-1, 3).astype(np.float32)
-
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    k = 3
-    _, labels, centers = cv2.kmeans(hsv, k, None, criteria, 3, cv2.KMEANS_RANDOM_CENTERS)
-    counts = np.bincount(labels.flatten(), minlength=k)
-    dominant = centers[np.argmax(counts)]
-    h, s, v = dominant
-
-    gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-    edge_density = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-
-    return float(h), float(s) / 255.0, float(v) / 255.0, edge_density
-
-
 def classify_waste(frame: np.ndarray) -> dict:
-    h, s, v, edge_density = _dominant_hsv(frame)
-
-    # TrashNet has no "organic" class - the trained model was never shown one,
-    # so organic still relies on this colour heuristic.
-    if 35 <= h <= 90 and s > 0.25:
-        confidence = min(0.55 + min(edge_density, 200) / 2000, 0.85)
-        return {
-            "category": "organic",
-            "confidence": round(confidence, 2),
-            "recommendation": RECOMMENDATIONS["organic"],
-        }
-
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     tensor = _TRANSFORM(Image.fromarray(rgb)).unsqueeze(0)
     with torch.no_grad():

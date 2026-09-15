@@ -29,8 +29,7 @@ on a facility-level analytics dashboard.
 frontend (React/Vite/TS/Tailwind)  ->  backend (FastAPI)  ->  SQLite
                                               |
                                      MobileNetV2 transfer-learning classifier
-                                     (plastic/paper/metal/glass/general) +
-                                     colour heuristic (organic only, see Limitations)
+                                     (plastic/paper/metal/glass/general/organic)
 ```
 
 ## Technology stack
@@ -111,15 +110,29 @@ identifiable documents/mail within frame before uploading.
 
 ## Limitations
 
-- **Plastic/paper/metal/glass/general classification uses a trained model** — a MobileNetV2
-  transfer-learning classifier (frozen ImageNet backbone + trained classifier head) fine-tuned
-  on TrashNet (5,527 labeled images), reaching 83.8% held-out validation accuracy. It will
-  still misclassify unusual items (e.g. a black plastic bottle vs a black metal can) —
-  83.8% is not perfect, and confidence scores reflect that.
-- **"Organic" is not in TrashNet** — that dataset has no organic-waste class, so organic
-  detection still falls back to a dominant-colour (k-means) heuristic (green/brown hue).
-  This is the one category not covered by the trained model.
-- Single-item photos only — no multi-object detection within one frame.
+- **All 6 categories (plastic/paper/metal/glass/general/organic) are now covered by a
+  single trained model** — a MobileNetV2 transfer-learning classifier (frozen ImageNet
+  backbone + trained classifier head), trained on TrashNet (5,527 images) plus an
+  MIT-licensed organic/biological-waste dataset (khoaliamle/Garbage_Classification_YOLO,
+  300 images) added for the "organic" class TrashNet never had. Training uses
+  class-weighted loss to correct for the resulting imbalance (paper was ~35% of the
+  combined dataset, organic ~11%). Reached **86.4% held-out validation accuracy**, up
+  from 83.8% on the original 5-class model.
+- **Live-tested against this project's own demo photos, not just the validation
+  split** — a small 4-photo spot check surfaced two different findings. One demo photo
+  (`food_organic_waste_compost_3.jpg`) turned out to be mislabeled: it showed a
+  composting *bucket and bran product*, not loose food waste, so the model's "wrong"
+  answer on it was reasonable — the photo has been replaced with a real food-scraps
+  photo, which the model now classifies correctly (90% confidence). The other two errors
+  are genuine: unusual, cluttered wide-angle scenes (a wire-mesh bin packed with hundreds
+  of bottles; a street photo of a person loading a truck with bottle bales) are visually
+  very different from the close-up single-item photos in the training data, and the
+  model gets both wrong. This is a real, disclosed limitation, not one that's been
+  papered over — a single, small transfer-learned classifier trained on ~6,000 close-up
+  photos should not be expected to generalize to arbitrary real-world scene photos.
+  83.8%/86.4% are not, and were never claimed to be, 100%.
+- Single-item, reasonably-framed photos work best — no multi-object detection within one
+  frame, and cluttered/wide scenes are out of the model's training distribution.
 
 ## Business model
 

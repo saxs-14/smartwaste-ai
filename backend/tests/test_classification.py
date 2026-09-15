@@ -9,11 +9,16 @@ def test_classify_waste_returns_known_category():
     assert 0 <= result["confidence"] <= 1
 
 
-def test_classify_waste_green_frame_leans_organic():
+def test_classify_waste_returns_valid_category_for_green_frame():
+    # A trained CNN's output on a flat synthetic colour block isn't a meaningful
+    # correctness check the way the old colour heuristic was - it was trained on
+    # real photos, not solid colour swatches. This just checks the model path runs
+    # end-to-end and returns one of the six real categories.
     frame = np.zeros((100, 100, 3), dtype=np.uint8)
     frame[:] = (40, 140, 40)  # BGR green
     result = classify_waste(frame)
-    assert result["category"] == "organic"
+    assert result["category"] in RECOMMENDATIONS
+    assert 0 <= result["confidence"] <= 1
 
 
 def test_recommendation_present_for_every_category():
