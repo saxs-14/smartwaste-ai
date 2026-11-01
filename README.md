@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/assets/banner.svg" width="100%" alt="SmartWaste AI banner"/></p>
+
 # SmartWaste AI
 
 AI-assisted waste identification MVP: classifies a photographed item into a recycling
